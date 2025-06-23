@@ -1,8 +1,8 @@
 ﻿# Cost-Model-Tool
 
-## ðŸš€ Build & Run
+## Build & Run
 
-\\\ash
+\\\ash
 docker build -t cost-model-app .
 docker run -p 8000:8000 \\
   -e AWS_ACCESS_KEY_ID=... \\
@@ -12,7 +12,7 @@ docker run -p 8000:8000 \\
 
 Then open [http://localhost:8000](http://localhost:8000).
 
-## ðŸ§© Extending
+## Extending
 
 - Add additional service endpoints in \pricing.py\ + FastAPI.
 - Set up CI/CD, deploy to ECS, AWS Lambda, or Heroku.
