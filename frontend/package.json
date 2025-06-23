@@ -1,17 +1,17 @@
 ﻿{
-  ""name"": ""cost-model-tool-frontend"",
-  ""version"": ""0.0.1"",
-  ""private"": true,
-  ""scripts"": {
-    ""dev"": ""vite"",
-    ""build"": ""vite build""
+  "name": "cost-model-tool-frontend",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build"
   },
-  ""dependencies"": {
-    ""react"": ""^18.0.0"",
-    ""react-dom"": ""^18.0.0""
+  "dependencies": {
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0"
   },
-  ""devDependencies"": {
-    ""vite"": ""^4.0.0"",
-    ""@vitejs/plugin-react"": ""^3.0.0""
+  "devDependencies": {
+    "vite": "^4.0.0",
+    "@vitejs/plugin-react": "^3.0.0"
   }
 }
