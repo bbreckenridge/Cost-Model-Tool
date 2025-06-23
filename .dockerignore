@@ -1,0 +1,4 @@
+﻿__pycache__/
+frontend/node_modules/
+app/__pycache__/
+dist/
