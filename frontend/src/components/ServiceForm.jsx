@@ -1,37 +1,152 @@
-﻿import { useState } from 'react';
+﻿import React, { useState } from "react";
 
-export default function ServiceForm({ onQuote }) {
-  const [instance, setInstance] = useState('');
-  const [region, setRegion] = useState('us-east-1');
+const SERVICES = [
+  { value: "ec2", label: "EC2" },
+  { value: "lambda", label: "Lambda" },
+  { value: "rds", label: "RDS" },
+  { value: "s3", label: "S3" },
+  { value: "bedrock", label: "Bedrock" },
+];
 
-  const handleSubmit = async e => {
+export default function ServiceForm() {
+  const [service, setService] = useState("ec2");
+  const [params, setParams] = useState({});
+  const [result, setResult] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  function handleParamChange(key, value) {
+    setParams((prev) => ({ ...prev, [key]: value }));
+  }
+
+  async function handleSubmit(e) {
     e.preventDefault();
-    const res = await fetch('/api/get-pricing', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ec2: instance || null, region }),
-    });
-    onQuote(await res.json());
-  };
+    setLoading(true);
+    setError(null);
+    setResult(null);
+
+    try {
+      // Build query string from params
+      const query = new URLSearchParams({ service, ...params }).toString();
+      const res = await fetch(`/api/price?${query}`);
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Error fetching price");
+      }
+
+      const data = await res.json();
+      setResult(data.price ? `${service.toUpperCase()}: $${data.price} / ${data.unit || "unit"}` : "No price found");
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function renderInputs() {
+    switch (service) {
+      case "ec2":
+        return (
+          <>
+            <label>
+              Instance Type:
+              <input
+                type="text"
+                value={params.instanceType || ""}
+                onChange={(e) => handleParamChange("instanceType", e.target.value)}
+                placeholder="e.g. t3.medium"
+                required
+              />
+            </label>
+            <label>
+              Region:
+              <input
+                type="text"
+                value={params.region || ""}
+                onChange={(e) => handleParamChange("region", e.target.value)}
+                placeholder="e.g. us-east-1"
+                required
+              />
+            </label>
+          </>
+        );
+      case "lambda":
+      case "s3":
+      case "bedrock":
+        return (
+          <label>
+            Region:
+            <input
+              type="text"
+              value={params.region || ""}
+              onChange={(e) => handleParamChange("region", e.target.value)}
+              placeholder="e.g. us-east-1"
+              required
+            />
+          </label>
+        );
+      case "rds":
+        return (
+          <>
+            <label>
+              Instance Class:
+              <input
+                type="text"
+                value={params.instanceClass || ""}
+                onChange={(e) => handleParamChange("instanceClass", e.target.value)}
+                placeholder="e.g. db.t3.medium"
+                required
+              />
+            </label>
+            <label>
+              Engine:
+              <input
+                type="text"
+                value={params.engine || ""}
+                onChange={(e) => handleParamChange("engine", e.target.value)}
+                placeholder="e.g. MySQL"
+                required
+              />
+            </label>
+            <label>
+              Region:
+              <input
+                type="text"
+                value={params.region || ""}
+                onChange={(e) => handleParamChange("region", e.target.value)}
+                placeholder="e.g. us-east-1"
+                required
+              />
+            </label>
+          </>
+        );
+      default:
+        return null;
+    }
+  }
 
   return (
     <form onSubmit={handleSubmit}>
-      <div>
-        <label>EC2 Instance:</label>
-        <input
-          value={instance}
-          onChange={e => setInstance(e.target.value)}
-          placeholder="e.g. t3.medium"
-        />
-      </div>
-      <div>
-        <label>Region:</label>
-        <select value={region} onChange={e => setRegion(e.target.value)}>
-          <option value="us-east-1">US East (N. Virginia)</option>
-          <option value="us-west-2">US West (Oregon)</option>
+      <label>
+        Service:
+        <select value={service} onChange={(e) => { setService(e.target.value); setParams({}); setResult(null); setError(null); }}>
+          {SERVICES.map(({ value, label }) => (
+            <option key={value} value={value}>
+              {label}
+            </option>
+          ))}
         </select>
-      </div>
-      <button type="submit">Get Quote</button>
+      </label>
+
+      {renderInputs()}
+
+      <button type="submit" disabled={loading}>
+        {loading ? "Loading..." : "Get Price"}
+      </button>
+
+      {result && <div style={{ marginTop: "1em", color: "green" }}>{result}</div>}
+      {error && <div style={{ marginTop: "1em", color: "red" }}>Error: {error}</div>}
     </form>
   );
 }

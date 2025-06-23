@@ -1,26 +1,40 @@
-﻿import boto3, json
+﻿from fastapi import FastAPI, HTTPException, Query
+from fastapi.staticfiles import StaticFiles
+from pricing import ec2_price, lambda_price, rds_price, s3_price, bedrock_price
+from pathlib import Path
 
-pr = boto3.client('pricing', region_name='us-east-1')
-LOC = {
-    'us-east-1': 'US East (N. Virginia)',
-    'us-west-2': 'US West (Oregon)',
-    'eu-west-1': 'EU (Ireland)'
-}
+app = FastAPI()
 
-def get_price(service_code, filters):
-    resp = pr.get_products(ServiceCode=service_code, Filters=filters, MaxResults=1)
-    if not resp['PriceList']: return None
-    prod = json.loads(resp['PriceList'][0])
-    od = next(iter(prod['terms']['OnDemand'].values()))
-    pd = next(iter(od['priceDimensions'].values()))
-    return float(pd['pricePerUnit']['USD']), pd['unit']
+@app.get("/api/price")
+def get_price(
+    service: str = Query(..., description="Service name (ec2, lambda, rds, s3, bedrock)"),
+    region: str = Query("us-east-1", description="AWS Region"),
+    instanceType: str = Query(None, description="Instance type (for ec2, rds)"),
+    engine: str = Query("MySQL", description="DB engine (for rds)"),
+):
+    service = service.lower()
+    if service == "ec2":
+        if not instanceType:
+            raise HTTPException(status_code=400, detail="Missing instanceType parameter for EC2")
+        result = ec2_price(instanceType, region)
+    elif service == "lambda":
+        result = lambda_price(region)
+    elif service == "rds":
+        if not instanceType:
+            raise HTTPException(status_code=400, detail="Missing instanceType parameter for RDS")
+        result = rds_price(instanceType, region, engine)
+    elif service == "s3":
+        result = s3_price(region)
+    elif service == "bedrock":
+        result = bedrock_price(region)
+    else:
+        raise HTTPException(status_code=400, detail=f"Unsupported service: {service}")
 
-def ec2_price(instance, region):
-    return get_price('AmazonEC2', [
-        {'Type':'TERM_MATCH','Field':'instanceType','Value':instance},
-        {'Type':'TERM_MATCH','Field':'location','Value':LOC[region]},
-        {'Type':'TERM_MATCH','Field':'operatingSystem','Value':'Linux'},
-        {'Type':'TERM_MATCH','Field':'preInstalledSw','Value':'NA'},
-        {'Type':'TERM_MATCH','Field':'tenancy','Value':'Shared'},
-        {'Type':'TERM_MATCH','Field':'capacitystatus','Value':'Used'}
-    ])
+    if not result:
+        raise HTTPException(status_code=404, detail="Pricing info not found")
+
+    price, unit = result
+    return {"price": price, "unit": unit}
+
+frontend_dist = Path(__file__).parent / "frontend_dist"
+app.mount("/", StaticFiles(directory=frontend_dist, html=True), name="frontend")
