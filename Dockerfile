@@ -9,7 +9,7 @@ FROM node:20 AS frontend
 WORKDIR /frontend
 COPY frontend/package.json frontend/vite.config.js ./
 RUN npm install
-COPY frontend/src ./src
+COPY COPY frontend/ ./
 RUN npm run build
 
 FROM backend AS final
